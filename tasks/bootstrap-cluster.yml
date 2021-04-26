@@ -1,0 +1,66 @@
+---
+- name: Determine node to use for bootstrapping cluster
+  block:
+  - name: Check if any control plane is bootstrapped
+    ansible.builtin.stat:
+      path: /etc/kubernetes/admin.conf
+    register: _kubernetes_stat
+    loop: "{{ groups[kubernetes_control_plane_group] }}"
+    delegate_to: "{{ item }}"
+    delegate_facts: True
+
+- name: Pick node from pre-existing cluster
+  ansible.builtin.set_fact:
+    _kubernetes_bootstrap_node: "{{ _kubernetes_stat.results | selectattr('stat.exists', 'equalto', true) | map(attribute='item') | first }}"
+  when: _kubernetes_stat.results | selectattr('stat.exists', 'equalto', true) | length > 0
+
+- name: Select first node to initialize cluster
+  ansible.builtin.set_fact:
+    _kubernetes_bootstrap_node: "{{ groups[kubernetes_control_plane_group] | first }}"
+  when: _kubernetes_stat.results | selectattr('stat.exists', 'equalto', true) | length == 0
+
+- name: Print selected bootstrap node
+  ansible.builtin.debug:
+    msg: "{{ _kubernetes_bootstrap_node }}"
+
+- name: Upload cluster configuration
+  ansible.builtin.template:
+    src: kubeadm.yaml.j2
+    dest: /etc/kubernetes/kubeadm.yaml
+
+- name: Initialize cluster
+  throttle: 1
+  ansible.builtin.shell: |
+    kubeadm init --config /etc/kubernetes/kubeadm.yaml --upload-certs 
+  args:
+    creates: /etc/kubernetes/admin.conf
+  when: inventory_hostname == _kubernetes_bootstrap_node
+
+- name: Generate certificates for joining cluster
+  ansible.builtin.shell: |
+    kubeadm init phase upload-certs --upload-certs 2>/dev/null | grep -v upload-certs
+  register: _kubeadm_init_upload_certs
+  when: inventory_hostname == _kubernetes_bootstrap_node
+
+- name: Generate token for joining cluster
+  ansible.builtin.shell: |
+    kubeadm token create --print-join-command
+  register: _kubeadm_token_create
+  when: inventory_hostname == _kubernetes_bootstrap_node
+
+- name: Set command for joining cluster
+  ansible.builtin.set_fact:
+    _kubernetes_join_command: |
+      {{ _kubeadm_token_create.stdout | trim }} --apiserver-bind-port 16443 \
+                                                --control-plane \
+                                                --certificate-key {{ _kubeadm_init_upload_certs.stdout | trim }} \
+                                                --ignore-preflight-errors=DirAvailable--etc-kubernetes-manifests
+  when: inventory_hostname == _kubernetes_bootstrap_node
+
+- name: Join cluster
+  throttle: 1
+  ansible.builtin.shell: "{{ hostvars[_kubernetes_bootstrap_node]['_kubernetes_join_command'] }}"
+  args:
+    creates: /etc/kubernetes/admin.conf
+  when: inventory_hostname != _kubernetes_bootstrap_node
+...

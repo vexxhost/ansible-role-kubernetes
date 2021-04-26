@@ -1,0 +1,10 @@
+---
+- name: Check if Kubernetes is already deployed
+  stat:
+    path: /etc/kubernetes/kubelet.conf
+  register: _kubernetes_kubelet
+
+- name: Join cluster
+  when: not _kubernetes_kubelet.stat.exists
+  ansible.builtin.include_tasks: join-cluster.yml
+...

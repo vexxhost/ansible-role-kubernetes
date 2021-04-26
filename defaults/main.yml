@@ -1,0 +1,19 @@
+---
+kubernetes_version: 1.19.10
+
+kubernetes_kernel_modules:
+- br_netfilter
+
+kubernetes_sysctls:
+  - name: net.ipv4.ip_forward
+    value: 1
+  - name: net.ipv4.tcp_l3mdev_accept
+    value: 1
+  - name: net.ipv4.udp_l3mdev_accept
+    value: 1
+  - name: net.bridge.bridge-nf-call-iptables
+    value: 1
+  - name: net.bridge.bridge-nf-call-ip6tables
+    value: 1
+
+kubernetes_keepalived_interface: bond0

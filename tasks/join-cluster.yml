@@ -1,0 +1,12 @@
+---
+- name: Generate token for joining cluster
+  delegate_to: "{{ groups[kubernetes_control_plane_group][0] }}"
+  ansible.builtin.shell: |
+    kubeadm token create --print-join-command
+  register: _kubeadm_token_create
+
+- name: Join cluster
+  ansible.builtin.shell: "{{ _kubeadm_token_create.stdout | trim }}"
+  args:
+    creates: /etc/kubernetes/kubelet.conf
+...

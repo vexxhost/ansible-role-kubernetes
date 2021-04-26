@@ -1,0 +1,65 @@
+---
+- name: Add repository keys
+  ansible.builtin.apt_key:
+    data: "{{ lookup('file', 'apt.asc') }}"
+    state: present
+
+- name: Add repository
+  ansible.builtin.apt_repository:
+    repo: "deb https://apt.kubernetes.io/ kubernetes-xenial main"
+    state: present
+
+- name: Setup version pins
+  ansible.builtin.template:
+    src: apt-preferences.j2
+    dest: /etc/apt/preferences.d/kubernetes
+    mode: 0644
+
+- name: Install packages
+  ansible.builtin.apt:
+    name:
+      - "kubeadm={{ kubernetes_version }}-00"
+      - "kubectl={{ kubernetes_version }}-00"
+      - "kubelet={{ kubernetes_version }}-00"
+    state: present
+
+- name: Enable kernel modules on-boot
+  ansible.builtin.template:
+    src: modules-load.conf.j2
+    dest: /etc/modules-load.d/k8s.conf
+
+- name: Enable kernel modules in runtime
+  community.general.modprobe:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ kubernetes_kernel_modules }}"
+
+- name: Configure sysctl values
+  ansible.posix.sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+  loop: "{{ kubernetes_sysctls }}"
+
+- name: Disable swap for current session
+  ansible.builtin.command: swapoff -a
+
+- name: Disable swap permanently, persist reboots
+  ansible.builtin.replace:
+    path: /etc/fstab
+    regexp: '^(\s*)([^#\n]+\s+)(\w+\s+)swap(\s+.*)$'
+    replace: '#\1\2\3swap\4'
+    backup: yes
+
+- name: Configure short hostname
+  ansible.builtin.hostname:
+    name: "{{ inventory_hostname_short }}"
+
+- name: Setup control plane
+  when: inventory_hostname in groups[kubernetes_control_plane_group]
+  ansible.builtin.include_tasks: control-plane.yml
+
+- name: Setup nodes
+  when: inventory_hostname not in groups[kubernetes_control_plane_group]
+  ansible.builtin.include_tasks: nodes.yml
+...
