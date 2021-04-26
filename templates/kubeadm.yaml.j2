@@ -9,6 +9,8 @@ kind: ClusterConfiguration
 controlPlaneEndpoint: "{{ kubernetes_hostname }}:6443"
 apiServer:
   extraArgs:
-    oidc-issuer-url: {{ kubernetes_oidc_issuer_url }}
     oidc-username-claim: email
+{% if kubernetes_oidc_issuer_url is defined %}
+    oidc-issuer-url: {{ kubernetes_oidc_issuer_url }}
     oidc-client-id: {{ kubernetes_oidc_client_id }}
+{% endif %}
