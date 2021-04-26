@@ -31,7 +31,7 @@
 - name: Initialize cluster
   throttle: 1
   ansible.builtin.shell: |
-    kubeadm init --config /etc/kubernetes/kubeadm.yaml --upload-certs 
+    kubeadm init --config /etc/kubernetes/kubeadm.yaml --upload-certs
   args:
     creates: /etc/kubernetes/admin.conf
   when: inventory_hostname == _kubernetes_bootstrap_node
