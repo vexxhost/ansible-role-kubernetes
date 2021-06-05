@@ -1,12 +1,17 @@
 ---
-- name: Add repository keys
-  ansible.builtin.apt_key:
-    data: "{{ lookup('file', 'apt.asc') }}"
-    state: present
+- name: Download GPG key
+  get_url:
+    url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+    dest: /usr/share/keyrings/kubernetes-archive-keyring.gpg
 
-- name: Add repository
+- name: Remove old repository
   ansible.builtin.apt_repository:
     repo: "deb https://apt.kubernetes.io/ kubernetes-xenial main"
+    state: absent
+    
+- name: Add repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main"
     state: present
 
 - name: Setup version pins
