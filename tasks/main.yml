@@ -1,8 +1,8 @@
 ---
-- name: Download GPG key
-  get_url:
-    url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
-    dest: /usr/share/keyrings/kubernetes-archive-keyring.gpg
+- name: Add repository keys
+  ansible.builtin.copy:
+    src: apt-key.gpg
+    dest: /usr/share/keyrings/kubernetes-archive-keyring.gp
 
 - name: Remove old repository
   ansible.builtin.apt_repository:
