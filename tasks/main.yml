@@ -2,7 +2,7 @@
 - name: Add repository keys
   ansible.builtin.copy:
     src: apt-key.gpg
-    dest: /usr/share/keyrings/kubernetes-archive-keyring.gp
+    dest: /usr/share/keyrings/kubernetes-archive-keyring.gpg
 
 - name: Remove old repository
   ansible.builtin.apt_repository:
