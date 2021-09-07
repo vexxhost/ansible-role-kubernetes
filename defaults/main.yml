@@ -15,5 +15,9 @@ kubernetes_sysctls:
     value: 1
   - name: net.bridge.bridge-nf-call-ip6tables
     value: 1
+  - name: net.ipv4.conf.default.rp_filter
+    value: 1
+  - name: net.ipv4.conf.all.rp_filter
+    value: 1
 
 kubernetes_keepalived_interface: bond0
